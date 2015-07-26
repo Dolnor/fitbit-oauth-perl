@@ -17,7 +17,7 @@ my $DEBUG = 0;
 
 my $accept_language_key = "Accept-Language";
 # If your weights are in kilograms, try en_UK.
-my $accept_language_value = "en_US";
+my $accept_language_value = "en_UK";
 
 $oauth = new OAuthSimple();
 # Set the action type to POST, otherwise the base string is wrong.
@@ -31,7 +31,7 @@ $oauth->setAction(POST);
 my $home = $ENV{HOME};
 
 # Where's your CSV? Mine is next to this script:
-my $file = "weightbot_data.csv";
+my $file = "weight.csv";
 
 my %keys;
 $keys{oauth_consumer_key} = "oauth_consumer_key";
@@ -72,12 +72,14 @@ sub fetchkey {
 
 fetchkey();
 
-my $weight_key = "weight";
 my $date_key = "date";
+my $time_key = "time";
+my $weight_key = "weight";
+my $bmi_key = "bmi";
 
 my $api_version = "1";
 my $response_format = "json";
-my $api_base_url = "http://api.fitbit.com";
+my $api_base_url = "https://api.fitbit.com";
 my $info_get_url = "/$api_version/user/-/profile.$response_format";
 my $weight_post_url = "/$api_version/user/-/body/log/weight.$response_format";
 my $full_post_url = $api_base_url . $weight_post_url;
@@ -107,12 +109,16 @@ while (my $line = <$data>) {
 		@previous_field = @field;
 		@field = $csv->fields();
 
-		my $weight = $field[2];
-		my $date = $field[0];
-		chomp($weight);
+		my $date = $field[2];
+		my $time = $field[3];
+		my $weight = $field[1];
+		my $bmi = $field[6];
 		chomp($date);
+		chomp($time);
+		chomp($weight);
+		chomp($bmi);
 
-		print "Posting weight $weight on date $date\n";
+		print "Posting weight $weight, bmi $bmi on $date $time\n";
 
 		# Upload:
 		$oauth->reset();
@@ -126,8 +132,10 @@ while (my $line = <$data>) {
 						oauth_secret => $keys{oauth_token_secret},
 				},
 				parameters => {
-					weight => $weight,
 					date => $date,
+					time => $time,
+					weight => $weight,
+					bmi => $bmi,
 				}
 			}
 		);
@@ -144,8 +152,10 @@ while (my $line = <$data>) {
 
 		# Make form data:
 		my $curlf = new WWW::Curl::Form;
-		$curlf->formadd($weight_key, $weight);
 		$curlf->formadd($date_key, $date);
+		$curlf->formadd($time_key, $time);
+		$curlf->formadd($weight_key, $weight);
+		$curlf->formadd($bmi_key, $bmi);
 
 		# Make a post request:
 		my $postcurl = WWW::Curl::Easy->new();
@@ -174,8 +184,7 @@ while (my $line = <$data>) {
 		my $q = new CGI::Simple($postcurl_responsebody);
 
 		if ($request_success && ( $response_code == 200 || $response_code == 201) ) {
-			print "Success!";
-			print " Response:\n" if $DEBUG;
+			print "Success: " if $DEBUG;
 			print "$postcurl_responsebody\n" if $DEBUG;
 		} else {
 			print("Failed to post data.\n");
