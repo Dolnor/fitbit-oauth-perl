@@ -1,16 +1,18 @@
 # What is this?
 
-A script to upload Weightbot weights to Fitbit.
+This is a fork of a script by Christopher Bowns, @cbowns to upload WeightBot weights to Fitbit. This fork re-purposes it to upload data from bluetooth-connected MiScale instead. 
 
-It's actually two Perl scripts: one to request a read-write OAuth token from Fitbit, and another to upload a CSV file from Weightbot. (It's much faster than doing it yourself.)
+It's actually two Perl scripts: one to request a read-write OAuth token from Fitbit, and another to upload a CSV file extracted from Mi Fit Android app. 
 
 ## What You'll Need:
 
-1. [OAuthSimple.pl](https://raw.github.com/jrconlin/oauthsimple/master/perl/OAuthSimple.pm). Download it and put it right next to `request_token.pl` and `upload_data.pl`.
+1. [OAuthSimple.pm](https://raw.github.com/jrconlin/oauthsimple/master/perl/OAuthSimple.pm). Download it and put it right next to `request_token.pl` and `upload_data.pl`.
 
-2. Your [Weightbot CSV data](https://weightbot.com/).
+2. Your [MiScale CSV data](https://github.com/Dolnor/mifit-data-export). Download and extract to the same folder as this tool, follow readme on how to set up and use it.
 
 3. A [registered Fitbit application](https://dev.fitbit.com/apps) with read-write access, and its API secrets.
+
+Original README follows ...
 
 ## How To Do It:
 

@@ -31,7 +31,7 @@ $oauth->setAction(POST);
 my $home = $ENV{HOME};
 
 # Where's your CSV? Mine is next to this script:
-my $file = "weight.csv";
+my $file = "miscale_weight.csv";
 
 my %keys;
 $keys{oauth_consumer_key} = "oauth_consumer_key";
@@ -100,6 +100,7 @@ while (my $line = <$data>) {
     
 	$count++;
 	chomp $line;
+	chop($line) if ($line =~ m/\r$/);
 	
 	print "---\nRecord #$count:\n" if $DEBUG;
 	print "Line: $line\n" if $DEBUG;
@@ -109,10 +110,10 @@ while (my $line = <$data>) {
 		@previous_field = @field;
 		@field = $csv->fields();
 
-		my $date = $field[2];
-		my $time = $field[3];
-		my $weight = $field[1];
-		my $bmi = $field[6];
+		my $date = $field[1];
+		my $time = $field[2];
+		my $weight = $field[3];
+		my $bmi = $field[4];
 		chomp($date);
 		chomp($time);
 		chomp($weight);
