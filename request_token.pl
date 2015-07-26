@@ -51,15 +51,16 @@ sub fetchkey()
 
 fetchkey();
 
-my $oauth_request_url = "http://api.fitbit.com/oauth/request_token";
-my $oauth_redeem_token_url = "http://www.fitbit.com/oauth/authorize?oauth_token=";
-my $oauth_access_token_url = "http://api.fitbit.com/oauth/access_token";
+my $oauth_request_url = "https://api.fitbit.com/oauth/request_token";
+my $oauth_redeem_token_url = "https://www.fitbit.com/oauth/authorize?oauth_token=";
+my $oauth_access_token_url = "https://api.fitbit.com/oauth/access_token";
 
 my $oauth_token;
 my $oauth_token_secret;
 my $oauth_callback_confirmed;
 my $oauth_encoded_user;
 
+$oauth->reset();
 $oauthrequest = $oauth->sign(
 	{
 		path => $oauth_request_url,
@@ -71,16 +72,16 @@ $oauthrequest = $oauth->sign(
 	}
 );
 
-print "Request URL: $oauthrequest->{signed_url}\n" if $DEBUG;
+print "Request Header: Authorization: $oauthrequest->{header}\n" if $DEBUG;
 
 # Request the token:
 my $requestcurl = WWW::Curl::Easy->new();
-$requestcurl->setopt( CURLOPT_URL, $oauthrequest->{signed_url} );
+my @req_header = "Authorization: " . $oauthrequest->{header};
+$requestcurl->setopt(CURLOPT_HTTPHEADER,\@req_header);
+$requestcurl->setopt(CURLOPT_URL, $oauth_request_url);
 
 my $requestcurl_responsebody;
 $requestcurl->setopt(CURLOPT_WRITEDATA,\$requestcurl_responsebody);
-
-# Request the token:
 my $request_retcode = $requestcurl->perform;
 my $request_success = checkreturncode($requestcurl, $request_retcode);
 
@@ -91,10 +92,12 @@ if ($request_success) {
 	$oauth_token = $q->{oauth_token}->[0];
 	$oauth_token_secret = $q->{oauth_token_secret}->[0];
 	$oauth_callback_confirmed = $q->{oauth_callback_confirmed}->[0];
-	print("Successfully got a token:\n") if $DEBUG;
-	print "$oauth_token\n" if $DEBUG;
-	print "Temporary secret:\n" if $DEBUG;
+	print("Temp Token: ") if $DEBUG;
+	print $oauth_token . "\n" if $DEBUG;
+	print "Temp Token Secret: " if $DEBUG;
 	print $oauth_token_secret . "\n" if $DEBUG;
+	print "Callback Confirmation: " if $DEBUG;
+	print $oauth_callback_confirmed . "\n" if $DEBUG;
 } else {
 	print("Failed to get a token.\n");
 	print "Response was:\n" if $DEBUG;
@@ -103,29 +106,26 @@ if ($request_success) {
 }
 
 # Use the token to request access:
-
 my $authorizecurl = WWW::Curl::Easy->new();
 my $tokenauthurl = $oauth_redeem_token_url . $oauth_token;
 print "Opening auth request URL in a browser: $tokenauthurl\n" if $DEBUG;
 `open $tokenauthurl`;
 
 # Wait for the user to enter their PIN:
-
-print "Enter your PIN from fitbit.com:\n";
+print "Enter your PIN from fitbit.com: ";
 $oauth_verifier = <>;
 chomp($oauth_verifier);
 
 print "Verifier code: $oauth_verifier\n" if $DEBUG;
 
 # Request a permanent token with the pin:
-
+$oauth->reset();
 $oauthaccess = $oauth->sign(
 	{
 		path => $oauth_access_token_url,
 		signatures => {
 			oauth_consumer_key => $keys{oauth_consumer_key},
 			shared_secret => $keys{oauth_shared_secret},
-# populated from previous request:
 			oauth_token => $oauth_token,
 			oauth_secret => $oauth_token_secret,
 		},
@@ -135,11 +135,14 @@ $oauthaccess = $oauth->sign(
 	}
 );
 
-print "Token access URL: $oauthaccess->{signed_url}\n" if $DEBUG;
+print "Access Header: Authorization: $oauthaccess->{header}\n" if $DEBUG;
 
 # Request the token:
 my $accesscurl = WWW::Curl::Easy->new();
-$accesscurl->setopt( CURLOPT_URL, $oauthaccess->{signed_url} );
+my @acc_header = "Authorization: " . $oauthaccess->{header};
+$accesscurl->setopt(CURLOPT_HTTPHEADER,\@acc_header);
+$accesscurl->setopt(CURLOPT_URL, $oauth_access_token_url);
+
 # A filehandle, reference to a scalar or reference to a typeglob can be used here.
 my $accesscurl_responsebody;
 $accesscurl->setopt(CURLOPT_WRITEDATA,\$accesscurl_responsebody);
@@ -163,18 +166,16 @@ if ($access_success) {
 	$oauth_token = $q->{oauth_token}->[0];
 	$oauth_token_secret = $q->{oauth_token_secret}->[0];
 	$oauth_encoded_user = $q->{encoded_user_id}->[0];
-	print "OAuth Token:\n";
-	print "$oauth_token\n";
-	print "OAuth Token Secret:\n";
-	print "$oauth_token_secret\n";
+	print "OAuth Token: ";
+	print $oauth_token . "\n" ;
+	print "OAuth Token Secret: ";
+	print $oauth_token_secret . "\n" ;
 } else {
 	print("Failed to get a token.\n");
 	print "Response was:\n" if $DEBUG;
 	print Dumper($q) if $DEBUG;
 	exit 1;
 }
-
-
 
 sub checkreturncode
 {
